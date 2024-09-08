@@ -91,10 +91,9 @@ public class Board {
         // Count the number of blank tiles and the number of each letter tile in the rack
         int blankCount = tiles.Count(t => t.Letter == ' ');
         byte[] letterCountsFromTiles = new byte[26];
-        foreach (var t in tiles) {
-            int l = t.Letter - 'A';
-            if (l is >= 0 and < 26) letterCountsFromTiles[l]++;
-        }
+        foreach (var t in tiles)
+            if (t.Letter is >= 'A' and <= 'Z')
+                letterCountsFromTiles[t.Letter - 'A']++;
 
         // Iterate over all possible words of each length
         for (int len = 1; len < wordsByLen.Length; len++) {
