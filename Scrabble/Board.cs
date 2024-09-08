@@ -54,7 +54,7 @@ public class Board {
         // Prints the board
         for (int r = 0; r < BoardHeight; r++) {
             // Row numbers
-            Console.Write($"{(r + 1):00} ");
+            Console.Write($"{r + 1:00} ");
             for (int c = 0; c < BoardWidth; c++) {
                 Tile t = Tiles[r, c];
                 char b = Bonuses[r][c];
