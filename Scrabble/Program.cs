@@ -77,9 +77,9 @@ public class Program {
             Console.WriteLine($"Player {i + 1}: {game.players[i].score}" +
                               (game.players[i].score == maxScore ? " (winner)" : ""));
     }
-    
+
     private static string Underline(string word, int positions) {
-        for (int i = word.Length; --i >=0;)
+        for (int i = word.Length; --i >= 0;)
             if ((positions & (1 << i)) != 0)
                 word = word.Insert(i + 1, Ansi.Reset).Insert(i, Ansi.Underline);
         return word;
