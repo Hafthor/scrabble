@@ -76,8 +76,9 @@ public class Board {
         }
     }
 
-    public IEnumerable<(int y, int x, bool horizontal, string word, int score, List<(string word, int score)> extras)>
-        GetPossiblePlays(string[][] wordsByLen, byte[][][] letterCountsByWordsByLen, List<Tile> tiles) {
+    public IEnumerable<(int y, int x, bool horizontal, string word, int score, List<(string word, int score)> extras,
+        int underlinePositions)> GetPossiblePlays(string[][] wordsByLen, byte[][][] letterCountsByWordsByLen,
+        List<Tile> tiles) {
         int blankCount = 0;
         byte[] letterCountsFromTiles = new byte[26];
         foreach (var t in tiles) {
@@ -122,8 +123,10 @@ public class Board {
                             var wlc = letterCountsForWords[wi];
                             bool isValid = true;
                             int remainingBlanks = blankCount;
+                            string blankLetters = "";
                             for (int i = 0; i < 26; i++) {
                                 int diff = letterCounts[i] - wlc[i];
+                                if (diff < 0 && remainingBlanks > 0) blankLetters += (char)('A' + i);
                                 if (diff < 0 && --remainingBlanks < 0) {
                                     isValid = false;
                                     break;
@@ -131,9 +134,19 @@ public class Board {
                             }
                             if (isValid) {
                                 string word = words[wi];
+                                int underlinePositions = 0;
+                                if (blankLetters.Length > 0) {
+                                    for (int i = 0, m = 1; i < word.Length; i++, m <<= 1) {
+                                        int j = blankLetters.IndexOf(word[i]);
+                                        if (j >= 0) {
+                                            underlinePositions |= m;
+                                            blankLetters = blankLetters.Remove(j, 1);
+                                        }
+                                    }
+                                }
                                 (int score, int usedTiles, List<(string word, int score)> extras) =
                                     GetScore(y, x, horizontal, word, tiles, wordsByLen);
-                                if (score > 0) yield return (y, x, horizontal, word, score, extras);
+                                if (score > 0) yield return (y, x, horizontal, word, score, extras, underlinePositions);
                             }
                         }
                     }

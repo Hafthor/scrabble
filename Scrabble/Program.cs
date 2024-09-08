@@ -20,8 +20,9 @@ public class Program {
                     var plays = game.board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
                             game.players[game.turn].tiles)
                         .OrderBy(p => p.score).ThenBy(p => p.word);
-                    foreach (var (y, x, h, w, score, extras) in plays) {
-                        Console.Write($"{y + 1},{x + 1},{(h ? 'H' : 'V')},{w}={score - extras.Sum(p => p.score)}");
+                    foreach (var (y, x, h, w, score, extras, underlinePositions) in plays) {
+                        string uw = Underline(w, underlinePositions);
+                        Console.Write($"{y + 1},{x + 1},{(h ? 'H' : 'V')},{uw}={score - extras.Sum(p => p.score)}");
                         foreach (var (ww, ss) in extras)
                             Console.Write($", {ww}={ss}");
                         Console.WriteLine(extras.Count > 0 ? $", total={score}" : "");
@@ -75,5 +76,12 @@ public class Program {
         for (int i = 0; i < players; i++)
             Console.WriteLine($"Player {i + 1}: {game.players[i].score}" +
                               (game.players[i].score == maxScore ? " (winner)" : ""));
+    }
+    
+    private static string Underline(string word, int positions) {
+        for (int i = word.Length; --i >=0;)
+            if ((positions & (1 << i)) != 0)
+                word = word.Insert(i + 1, Ansi.Reset).Insert(i, Ansi.Underline);
+        return word;
     }
 }
