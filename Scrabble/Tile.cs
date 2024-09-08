@@ -1,4 +1,4 @@
-namespace ScrabbleHelper;
+namespace Scrabble;
 
 public class Tile {
     public readonly int points;

@@ -1,4 +1,4 @@
-namespace ScrabbleHelper;
+namespace Scrabble;
 
 public class Game {
     public readonly Player[] players;
@@ -31,7 +31,8 @@ public class Game {
 
     public string Play(string word, int row, int col, bool horizontal, string[][] wordsByLen) {
         Player player = players[turn];
-        (int score, int usedTiles, List<(string word, int score)> perpendiculars) = board.GetScore(row, col, horizontal, word, player.tiles, wordsByLen);
+        (int score, int usedTiles, List<(string word, int score)> perpendiculars) =
+            board.GetScore(row, col, horizontal, word, player.tiles, wordsByLen);
         if (score == 0) return "Invalid play";
         // commit the play
         List<Tile> tilesToUse = player.tiles.Where((_, i) => (usedTiles & (1 << i)) != 0).ToList();

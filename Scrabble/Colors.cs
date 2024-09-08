@@ -1,4 +1,4 @@
-namespace ScrabbleHelper;
+namespace Scrabble;
 
 public static class Colors {
     public static string DoubleWordScore = Ansi.PinkBg;

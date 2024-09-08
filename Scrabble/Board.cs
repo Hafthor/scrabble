@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace ScrabbleHelper;
+namespace Scrabble;
 
 public class Board {
     public static readonly string[] Bonuses = """
@@ -58,12 +58,13 @@ public class Board {
                     _ => Ansi.BrownBg
                 });
                 if (t == null) {
-                    if (b == '*') Console.Write(Ansi.Red + "><");
-                    else if (b == '2') Console.Write(Ansi.Red + "dw");
-                    else if (b == '3') Console.Write(Ansi.Pink + "tw");
-                    else if (b == 'd') Console.Write(Ansi.BGreen + "dl");
-                    else if (b == 't') Console.Write(Ansi.BBlue + "tl");
-                    else Console.Write("  ");
+                    // if (b == '*') Console.Write(Ansi.Red + "><");
+                    // else if (b == '2') Console.Write(Ansi.Red + "dw");
+                    // else if (b == '3') Console.Write(Ansi.Pink + "tw");
+                    // else if (b == 'd') Console.Write(Ansi.BGreen + "dl");
+                    // else if (b == 't') Console.Write(Ansi.BBlue + "tl");
+                    // else Console.Write("  ");
+                    Console.Write("  ");
                 } else {
                     Console.Write(t.orgLetter == ' ' ? Colors.BlankTile : Colors.RegularTile);
                     Console.Write($"{t}");
@@ -76,8 +77,7 @@ public class Board {
     }
 
     public IEnumerable<(int y, int x, bool horizontal, string word, int score, List<(string word, int score)> extras)>
-        GetPossiblePlays(string[][] wordsByLen,
-            string[][] dorswByLen, byte[][][] letterCountsByWordsByLen, List<Tile> tiles) {
+        GetPossiblePlays(string[][] wordsByLen, byte[][][] letterCountsByWordsByLen, List<Tile> tiles) {
         int blankCount = 0;
         byte[] letterCountsFromTiles = new byte[26];
         foreach (var t in tiles) {

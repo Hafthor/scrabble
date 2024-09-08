@@ -1,9 +1,10 @@
-﻿namespace ScrabbleHelper;
+﻿namespace Scrabble;
 
 public class Program {
     static void Main(string[] args) {
         int players = args.Length > 0 ? int.Parse(args[0]) : 2;
-        Random random = args.Length > 1 ? new(int.Parse(args[1])) : new(0);
+        int seed = args.Length > 1 ? int.Parse(args[1]) : new Random().Next();
+        Random random = new(seed);
         Game game = new(players, random);
         WordList wordList = new();
         int passes = 0;
@@ -13,11 +14,11 @@ public class Program {
             Console.WriteLine("Your tiles: " + string.Join(" ", game.players[game.turn].tiles));
             string cmd;
             for (;;) {
-                Console.Write("Enter row,col,h/v,word: ");
+                Console.Write("Enter row,col,h/v,word or help: ");
                 cmd = Console.ReadLine();
                 if (cmd is "") {
-                    var plays = game.board.GetPossiblePlays(wordList.WordsByLen, wordList.DorwsByLen,
-                            wordList.LetterCountsForWordsByLen, game.players[game.turn].tiles)
+                    var plays = game.board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
+                            game.players[game.turn].tiles)
                         .OrderBy(p => p.score).ThenBy(p => p.word);
                     foreach (var (y, x, h, w, score, extras) in plays) {
                         Console.Write($"{y + 1},{x + 1},{(h ? 'H' : 'V')},{w}={score - extras.Sum(p => p.score)}");
@@ -27,10 +28,16 @@ public class Program {
                     }
                     Console.Write("done - ");
                     continue;
-                }
-                if (cmd == "pass") {
+                } else if (cmd == "seed") {
+                    Console.WriteLine($"Seed={seed}");
+                    continue;
+                } else if (cmd == "pass") {
                     if (++passes < players) game.turn = (game.turn + 1) % players;
                     break;
+                } else if (cmd == "help") {
+                    Console.WriteLine("Commands: pass | rack | help | seed | exit");
+                    Console.WriteLine("or enter row,col,h/v,word to play a word");
+                    continue;
                 }
                 passes = 0;
                 if (cmd == "rack") {
@@ -46,7 +53,7 @@ public class Program {
                 int row = int.Parse(parts[0]) - 1, col = int.Parse(parts[1]) - 1;
                 bool horizontal = parts[2].ToUpper() == "H";
                 string word = parts[3].ToUpper();
-                if (!wordList.Words.Contains(word)) {
+                if (!wordList.WordsByLen[word.Length].Contains(word)) {
                     Console.WriteLine("Invalid word");
                     continue;
                 }
@@ -64,10 +71,9 @@ public class Program {
         }
         game.board.Print();
         Console.WriteLine("Game over");
-        for (int i = 0; i < players; i++)
-            Console.WriteLine($"Player {i + 1}: {game.players[i].score}");
         int maxScore = game.players.Max(p => p.score);
-        List<int> winners = game.players.Where(p => p.score == maxScore).Select((_, i) => i + 1).ToList();
-        Console.WriteLine($"Winner{(winners.Count > 1 ? "s" : "")}: {string.Join(", ", winners)}");
+        for (int i = 0; i < players; i++)
+            Console.WriteLine($"Player {i + 1}: {game.players[i].score}" +
+                              (game.players[i].score == maxScore ? " (winner)" : ""));
     }
 }

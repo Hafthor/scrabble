@@ -1,4 +1,4 @@
-namespace ScrabbleHelper;
+namespace Scrabble;
 
 public class Player {
     public readonly List<Tile> tiles = new();
