@@ -88,15 +88,12 @@ public class Board {
     public IEnumerable<(int y, int x, bool horizontal, string word, int score, List<(string word, int score)> extras,
         int blankPositions)> PossiblePlays(string[][] wordsByLen, byte[][][] letterCountsByWordsByLen,
         List<Tile> tiles) {
-        // Count the number of blank tiles and the number of each tile in the rack
-        int blankCount = 0;
+        // Count the number of blank tiles and the number of each letter tile in the rack
+        int blankCount = tiles.Count(t => t.Letter == ' ');
         byte[] letterCountsFromTiles = new byte[26];
         foreach (var t in tiles) {
-            char c = t.Letter;
-            if (c != ' ')
-                letterCountsFromTiles[c - 'A']++;
-            else
-                blankCount++;
+            int l = t.Letter - 'A';
+            if (l is >= 0 and < 26) letterCountsFromTiles[l]++;
         }
 
         // Iterate over all possible words of each length
