@@ -44,8 +44,8 @@ public class Game {
         // commit the play
         List<Tile> tilesToUse = player.Tiles.Where((_, i) => (usedTiles & (1 << i)) != 0).ToList();
         foreach (var c in word) {
-            if (Board.TheBoard[row, col] == null) {
-                Tile t = Board.TheBoard[row, col] = tilesToUse.FirstOrDefault(t => t.Letter == c) ??
+            if (Board.Tiles[row, col] == null) {
+                Tile t = Board.Tiles[row, col] = tilesToUse.FirstOrDefault(t => t.Letter == c) ??
                                                  tilesToUse.First(t => t.Letter == ' ');
                 if (t.OrgLetter == ' ') t.SetLetter(c);
                 tilesToUse.Remove(t);

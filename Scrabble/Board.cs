@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace Scrabble;
 
 public class Board {
@@ -38,7 +36,7 @@ public class Board {
 
     private static bool IsCenter(char c) => c == '*';
 
-    public readonly Tile[,] TheBoard = new Tile[BoardHeight, BoardWidth];
+    public readonly Tile[,] Tiles = new Tile[BoardHeight, BoardWidth];
 
     public void Print() {
         // Prints color legend
@@ -56,7 +54,7 @@ public class Board {
             // Row numbers
             Console.Write($"{(r + 1):00} ");
             for (int c = 0; c < BoardWidth; c++) {
-                Tile t = TheBoard[r, c];
+                Tile t = Tiles[r, c];
                 char b = Bonuses[r][c];
                 // Colors the tile based on the bonus
                 Console.Write(b switch {
@@ -112,18 +110,16 @@ public class Board {
                     for (int x = 0; x < xl; x++) {
                         // ensure it is connected and is not extending an existing word
                         if (horizontal) {
-                            if (x > 0 && TheBoard[y, x - 1] != null) continue;
-                            if (x < xl - 1 && TheBoard[y, x + len] != null) continue;
+                            if (x > 0 && Tiles[y, x - 1] != null || x < xl - 1 && Tiles[y, x + len] != null) continue;
                         } else {
-                            if (y > 0 && TheBoard[y - 1, x] != null) continue;
-                            if (y < yl - 1 && TheBoard[y + len, x] != null) continue;
+                            if (y > 0 && Tiles[y - 1, x] != null || y < yl - 1 && Tiles[y + len, x] != null) continue;
                         }
 
                         // add the tiles on the board and check to see if we are connected
                         Array.Copy(letterCountsFromTiles, letterCounts, 26);
                         bool connected = false;
                         for (int i = 0; i < len; i++) {
-                            Tile b = horizontal ? TheBoard[y, x + i] : TheBoard[y + i, x];
+                            Tile b = horizontal ? Tiles[y, x + i] : Tiles[y + i, x];
                             if (b != null) {
                                 letterCounts[b.Letter - 'A']++;
                                 connected = true;
@@ -164,7 +160,7 @@ public class Board {
                             }
 
                             // compute the score - might be rejected if perpendicular words are not valid
-                            (int score, int usedTiles, List<(string word, int score)> extras) =
+                            (int score, _, List<(string word, int score)> extras) =
                                 GetScore(y, x, horizontal, word, tiles, wordsByLen);
 
                             // return the result
@@ -184,10 +180,10 @@ public class Board {
         List<(string word, int score)> extras = new();
 
         // check if the word can be placed and score it
-        for (int i = 0; i < word.Length; i++) {
-            char c = word[i], b = Bonuses[y][x];
+        foreach (var c in word) {
+            char b = Bonuses[y][x];
             wordMultiplier *= WordMultiplier(b);
-            Tile t = TheBoard[y, x];
+            Tile t = Tiles[y, x];
             if (t != null && t.Letter != c) return (0, 0, null);
             connected |= t != null || IsCenter(Bonuses[y][x]);
             bool hadTileAlready = t != null;
@@ -214,13 +210,13 @@ public class Board {
                 char[] subWord = null;
                 if (horizontal) {
                     int ys = y, ye = y;
-                    for (; ys > 0 && TheBoard[ys - 1, x] != null; ys--) ; // look up
-                    for (; ye < BoardHeight - 1 && TheBoard[ye + 1, x] != null; ye++) ; // look down
+                    for (; ys > 0 && Tiles[ys - 1, x] != null;) ys--; // look up
+                    for (; ye < BoardHeight - 1 && Tiles[ye + 1, x] != null;) ye++; // look down
                     if (ys < y || ye > y) { // if we are connecting perpendicularly
                         // read the word and score it
                         subWord = new char[ye - ys + 1];
                         for (int yy = ys; yy <= ye; yy++) {
-                            Tile tt = yy == y ? t : TheBoard[yy, x];
+                            Tile tt = yy == y ? t : Tiles[yy, x];
                             char bb = Bonuses[yy][x];
                             subScore += tt.Points * LetterMultiplier(bb);
                             subWordMultiplier *= WordMultiplier(bb);
@@ -229,13 +225,13 @@ public class Board {
                     }
                 } else {
                     int xs = x, xe = x;
-                    for (; xs > 0 && TheBoard[y, xs - 1] != null; xs--) ; // look left
-                    for (; xe < BoardWidth - 1 && TheBoard[y, xe + 1] != null; xe++) ; // look right
+                    for (; xs > 0 && Tiles[y, xs - 1] != null;) xs--; // look left
+                    for (; xe < BoardWidth - 1 && Tiles[y, xe + 1] != null;) xe++; // look right
                     if (xs < x || xe > x) { // if we are connecting perpendicularly
                         // read the word and score it
                         subWord = new char[xe - xs + 1];
                         for (int xx = xs; xx <= xe; xx++) {
-                            Tile tt = xx == x ? t : TheBoard[y, xx];
+                            Tile tt = xx == x ? t : Tiles[y, xx];
                             char bb = Bonuses[y][xx];
                             subScore += tt.Points * LetterMultiplier(bb);
                             subWordMultiplier *= WordMultiplier(bb);
