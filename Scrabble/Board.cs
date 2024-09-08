@@ -49,7 +49,7 @@ public class Board {
         // Prints the column numbers
         Console.Write("  ");
         for (int c = 0; c < BoardWidth; c++)
-            Console.Write($" {(c + 1):00}");
+            Console.Write($" {c + 1:00}");
         Console.WriteLine();
         // Prints the board
         for (int r = 0; r < BoardHeight; r++) {
