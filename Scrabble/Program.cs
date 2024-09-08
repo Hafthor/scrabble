@@ -9,23 +9,24 @@ public class Program {
         WordList wordList = new();
         int passes = 0;
         while (passes < players) {
-            game.board.Print();
-            Console.WriteLine($"Player {game.turn + 1} ({game.players[game.turn].score})");
-            Console.WriteLine("Your tiles: " + string.Join(" ", game.players[game.turn].tiles));
+            game.Board.Print();
+            var curplayer = game.Players[game.Turn];
+            Console.Write($"Player {game.Turn + 1} ({curplayer.Score}) tiles: ");
+            Console.WriteLine(string.Join(" ", curplayer.Tiles));
             string cmd;
             for (;;) {
                 Console.Write("Enter row,col,h/v,word or help: ");
                 cmd = Console.ReadLine();
                 if (cmd is "") {
-                    var plays = game.board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
-                            game.players[game.turn].tiles)
-                        .OrderBy(p => p.score).ThenBy(p => p.word);
+                    var plays = game.Board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
+                            curplayer.Tiles)
+                        .OrderBy(p => p.score + p.extras.Sum(e => e.score)).ThenBy(p => p.word);
                     foreach (var (y, x, h, w, score, extras, underlinePositions) in plays) {
                         string uw = Underline(w, underlinePositions);
-                        Console.Write($"{y + 1},{x + 1},{(h ? 'H' : 'V')},{uw}={score - extras.Sum(p => p.score)}");
+                        Console.Write($"{y + 1},{x + 1},{(h ? 'H' : 'V')},{uw}={score}");
                         foreach (var (ww, ss) in extras)
                             Console.Write($", {ww}={ss}");
-                        Console.WriteLine(extras.Count > 0 ? $", total={score}" : "");
+                        Console.WriteLine(extras.Count > 0 ? $", total={score + extras.Sum(p => p.score)}" : "");
                     }
                     Console.Write("done - ");
                     continue;
@@ -33,7 +34,7 @@ public class Program {
                     Console.WriteLine($"Seed={seed}");
                     continue;
                 } else if (cmd == "pass") {
-                    if (++passes < players) game.turn = (game.turn + 1) % players;
+                    if (++passes < players) game.Turn = (game.Turn + 1) % players;
                     break;
                 } else if (cmd == "help") {
                     Console.WriteLine("Commands: pass | rack | help | seed | exit");
@@ -42,11 +43,11 @@ public class Program {
                 }
                 passes = 0;
                 if (cmd == "rack") {
-                    game.bag.AddRange(game.players[game.turn].tiles);
-                    game.players[game.turn].tiles.Clear();
+                    game.Bag.AddRange(curplayer.Tiles);
+                    curplayer.Tiles.Clear();
                     game.ShuffleBag(random);
-                    game.players[game.turn].Draw(game.bag);
-                    game.turn = (game.turn + 1) % players;
+                    curplayer.Draw(game.Bag);
+                    game.Turn = (game.Turn + 1) % players;
                     break;
                 }
                 if (cmd is null or "exit" or "quit") break;
@@ -58,24 +59,24 @@ public class Program {
                     Console.WriteLine("Invalid word");
                     continue;
                 }
-                int currentPlayer = game.turn, currentScore = game.players[currentPlayer].score;
+                int currentPlayerTurn = game.Turn, currentScore = game.Players[currentPlayerTurn].Score;
                 string error = game.Play(word, row, col, horizontal, wordList.WordsByLen);
                 if (error == null) {
-                    int newScore = game.players[currentPlayer].score;
+                    int newScore = game.Players[currentPlayerTurn].Score;
                     Console.WriteLine(
-                        $"Player {currentPlayer + 1} adds {newScore - currentScore} to score, new score = {newScore}");
+                        $"Player {currentPlayerTurn + 1} adds {newScore - currentScore} to score, new score = {newScore}");
                     break;
                 }
                 Console.WriteLine(error);
             }
             if (cmd is "exit" or "quit") break;
         }
-        game.board.Print();
+        game.Board.Print();
         Console.WriteLine("Game over");
-        int maxScore = game.players.Max(p => p.score);
+        int maxScore = game.Players.Max(p => p.Score);
         for (int i = 0; i < players; i++)
-            Console.WriteLine($"Player {i + 1}: {game.players[i].score}" +
-                              (game.players[i].score == maxScore ? " (winner)" : ""));
+            Console.WriteLine($"Player {i + 1}: {game.Players[i].Score}" +
+                              (game.Players[i].Score == maxScore ? " (winner)" : ""));
     }
 
     private static string Underline(string word, int positions) {

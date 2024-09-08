@@ -1,55 +1,62 @@
 namespace Scrabble;
 
 public class Game {
-    public readonly Player[] players;
-    public int turn = 0;
-    public readonly List<Tile> bag;
-    public readonly Board board;
+    public readonly Player[] Players;
+    public readonly List<Tile> Bag;
+    public readonly Board Board;
+    public int Turn;
 
     public Game(int players, Random random = null) {
-        board = new();
-        bag = new();
-        foreach (var letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ ") {
+        Board = new();
+        Bag = new();
+        for (char letter = 'A'; letter <= 'Z'; letter++) {
             int points = Tile.PointsForLetter(letter);
             for (int i = 0; i < Tile.CountForLetter(letter); i++)
-                bag.Add(new Tile(letter, points));
+                Bag.Add(new Tile(letter, points));
+        }
+        {
+            char letter = ' ';
+            int points = Tile.PointsForLetter(letter);
+            for (int i = 0; i < Tile.CountForLetter(letter); i++)
+                Bag.Add(new Tile(letter, points));
         }
         ShuffleBag(random);
-        this.players = new Player[players];
+        Players = new Player[players];
         for (int i = 0; i < players; i++)
-            this.players[i] = new Player(bag);
+            Players[i] = new Player(Bag);
     }
 
     public void ShuffleBag(Random random = null) {
         random ??= new();
         // Fisher-Yates shuffle
-        for (int i = bag.Count - 1; i > 0; i--) {
+        for (int i = Bag.Count - 1; i > 0; i--) {
             int j = random.Next(i + 1);
-            (bag[i], bag[j]) = (bag[j], bag[i]);
+            (Bag[i], Bag[j]) = (Bag[j], Bag[i]);
         }
     }
 
     public string Play(string word, int row, int col, bool horizontal, string[][] wordsByLen) {
-        Player player = players[turn];
-        (int score, int usedTiles, List<(string word, int score)> perpendiculars) =
-            board.GetScore(row, col, horizontal, word, player.tiles, wordsByLen);
+        Player player = Players[Turn];
+        (int score, int usedTiles, List<(string word, int score)> extras) =
+            Board.GetScore(row, col, horizontal, word, player.Tiles, wordsByLen);
+        if (extras != null) score += extras.Sum(e => e.score);
         if (score == 0) return "Invalid play";
         // commit the play
-        List<Tile> tilesToUse = player.tiles.Where((_, i) => (usedTiles & (1 << i)) != 0).ToList();
+        List<Tile> tilesToUse = player.Tiles.Where((_, i) => (usedTiles & (1 << i)) != 0).ToList();
         foreach (var c in word) {
-            if (board.board[row, col] == null) {
-                Tile t = board.board[row, col] = tilesToUse.FirstOrDefault(t => t.Letter == c) ??
+            if (Board.TheBoard[row, col] == null) {
+                Tile t = Board.TheBoard[row, col] = tilesToUse.FirstOrDefault(t => t.Letter == c) ??
                                                  tilesToUse.First(t => t.Letter == ' ');
-                if (t.orgLetter == ' ') t.SetLetter(c);
+                if (t.OrgLetter == ' ') t.SetLetter(c);
                 tilesToUse.Remove(t);
-                player.tiles.Remove(t);
+                player.Tiles.Remove(t);
             }
             if (horizontal) col++;
             else row++;
         }
-        player.Draw(bag);
-        player.score += score;
-        turn = (turn + 1) % players.Length;
+        player.Draw(Bag);
+        player.Score += score;
+        Turn = (Turn + 1) % Players.Length;
         return null;
     }
 }

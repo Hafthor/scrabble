@@ -1,22 +1,22 @@
 namespace Scrabble;
 
 public class Tile {
-    public readonly int points;
-    public readonly char orgLetter;
+    public readonly int Points;
+    public readonly char OrgLetter;
     public char Letter { get; private set; }
 
     public Tile(char letter, int points) {
-        Letter = orgLetter = letter;
-        this.points = points;
+        Letter = OrgLetter = letter;
+        Points = points;
     }
 
     public void SetLetter(char letter) {
-        if (orgLetter != ' ')
+        if (OrgLetter != ' ')
             throw new InvalidOperationException("Cannot change the letter of a non-blank tile");
         Letter = letter;
     }
 
-    public override string ToString() => (Letter == ' ' ? '_' : Letter) + "" + (points == 10 ? "$" : points);
+    public override string ToString() => (Letter == ' ' ? '_' : Letter) + "" + (Points == 10 ? "$" : Points);
 
     public static int CountForLetter(char letter) => letter switch {
         'E' => 12,
