@@ -21,7 +21,7 @@ public static class Program {
                 if (cmd is "" or "plays") {
                     if (curPlayer.Tiles.Count(t => t.Letter == ' ') > 1)
                         Console.WriteLine("Warning: this might be slow with multiple blank tiles");
-                    var plays = game.Board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
+                    var plays = game.Board.PossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
                             curPlayer.Tiles)
                         .OrderBy(p => p.score + p.extras.Sum(e => e.score)).ThenBy(p => p.word);
                     foreach (var (y, x, h, w, score, extras, underlinePositions) in plays) {
@@ -60,7 +60,7 @@ public static class Program {
                     // try to play word - only works if there is a single position/direction that works
                     if (curPlayer.Tiles.Count(t => t.Letter == ' ') > 1)
                         Console.WriteLine("Warning: this might be slow with multiple blank tiles");
-                    var plays = game.Board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
+                    var plays = game.Board.PossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
                         curPlayer.Tiles).Where(p => p.word == w).ToList();
                     if (plays.Count < 1) {
                         Console.WriteLine("No plays found");

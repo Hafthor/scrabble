@@ -86,7 +86,7 @@ public class Board {
     }
 
     public IEnumerable<(int y, int x, bool horizontal, string word, int score, List<(string word, int score)> extras,
-        int blankPositions)> GetPossiblePlays(string[][] wordsByLen, byte[][][] letterCountsByWordsByLen,
+        int blankPositions)> PossiblePlays(string[][] wordsByLen, byte[][][] letterCountsByWordsByLen,
         List<Tile> tiles) {
         // Count the number of blank tiles and the number of each tile in the rack
         int blankCount = 0;
@@ -160,9 +160,9 @@ public class Board {
                                 }
 
                             // compute the score - might be rejected if perpendicular words are not valid
-                            (int score, _, List<(string word, int score)> extras) =
-                                GetScore(y, x, dir.dx > 0, word, tiles, wordsByLen);
-                            if (score < 0) continue;
+                            (string error, int score, _, List<(string word, int score)> extras) =
+                                Score(y, x, dir.dx > 0, word, tiles, wordsByLen);
+                            if (error != null) continue;
 
                             // return the result
                             yield return (y, x, dir.dx > 0, word, score, extras, blankPositions);
@@ -173,9 +173,8 @@ public class Board {
         }
     }
 
-    public (int score, int usedTiles, List<(string word, int score)> extras) GetScore(int y, int x,
+    public (string error, int score, int usedTiles, List<(string word, int score)> extras) Score(int y, int x,
         bool horizontal, string word, List<Tile> rack, string[][] wordListByLen) {
-        (int score, int usedTiles, List<(string word, int score)> extras) errorResult = (-1, 0, null);
         bool connected = false;
         int score = 0, wordMultiplier = 1, tileUsed = 0;
         List<(string word, int score)> extras = new();
@@ -185,7 +184,7 @@ public class Board {
             char b = Bonuses[y][x];
             wordMultiplier *= WordMultiplier(b);
             Tile t = Tiles[y, x];
-            if (t != null && t.Letter != c) return errorResult;
+            if (t != null && t.Letter != c) return ($"cannot change tile at {y + 1},{x + 1}", 0, 0, null);
             connected |= t != null || IsCenter(Bonuses[y][x]);
             bool hadTileAlready = t != null;
             if (t == null)
@@ -202,7 +201,7 @@ public class Board {
                         tileUsed |= m;
                         break;
                     }
-            if (t == null) return errorResult;
+            if (t == null) return ($"missing tile for {y + 1},{x + 1}", 0, 0, null);
             score += t.Points * LetterMultiplier(b);
             if (!hadTileAlready) {
                 // if we are placing a tile on the board, we need to check if it is connected to other tiles
@@ -228,7 +227,8 @@ public class Board {
                     }
                     // check if the perpendicular word is valid
                     string sw = new(subWord);
-                    if (!wordListByLen[sw.Length].Contains(sw)) return errorResult;
+                    if (!wordListByLen[sw.Length].Contains(sw))
+                        return ($"invalid perpendicular word {sw} at {y + 1},{x + 1}", 0, 0, null);
                     // record the perpendicular word and its score
                     extras.Add((sw, subScore * subWordMultiplier));
                 }
@@ -236,10 +236,11 @@ public class Board {
             if (horizontal) x++;
             else y++;
         }
-        if (!connected || tileUsed == 0) return errorResult;
+        if (!connected) return ($"word is not connected", 0, 0, null);
+        if (tileUsed == 0) return ($"no tiles used", 0, 0, null);
         // bonus for using all tiles
         if (tileUsed == (1 << rack.Count) - 1)
             extras.Add(("all tiles used", 50));
-        return (score * wordMultiplier, tileUsed, extras);
+        return (null, score * wordMultiplier, tileUsed, extras);
     }
 }
