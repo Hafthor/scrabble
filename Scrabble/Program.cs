@@ -11,13 +11,16 @@ public static class Program {
         while (passes < players) {
             game.Board.Print();
             var curPlayer = game.Players[game.Turn];
-            Console.Write($"Player {game.Turn + 1} ({curPlayer.Score}) tiles: ");
+            int currentPlayerTurn = game.Turn, currentScore = curPlayer.Score;
+            Console.Write($"Player {currentPlayerTurn + 1} ({currentScore}) tiles: ");
             Console.WriteLine(string.Join(" ", curPlayer.Tiles));
             string cmd;
             for (;;) {
-                Console.Write("Enter row,col,h/v,word or help: ");
+                Console.Write("Enter command or help: ");
                 cmd = Console.ReadLine();
-                if (cmd is "") {
+                if (cmd is "" or "plays") {
+                    if (curPlayer.Tiles.Count(t => t.Letter == ' ') > 1)
+                        Console.WriteLine("Warning: this might be slow with multiple blank tiles");
                     var plays = game.Board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
                             curPlayer.Tiles)
                         .OrderBy(p => p.score + p.extras.Sum(e => e.score)).ThenBy(p => p.word);
@@ -28,38 +31,73 @@ public static class Program {
                             Console.Write($", {ww}={ss}");
                         Console.WriteLine(extras.Count > 0 ? $", total={score + extras.Sum(p => p.score)}" : "");
                     }
-                    Console.Write("done - ");
                     continue;
                 } else if (cmd == "seed") {
                     Console.WriteLine($"Seed={seed}");
                     continue;
                 } else if (cmd == "pass") {
-                    if (++passes < players) game.Turn = (game.Turn + 1) % players;
+                    if (++passes < players) game.NextPlayer();
                     break;
-                } else if (cmd == "help") {
-                    Console.WriteLine("Commands: pass | rack | help | seed | exit");
+                } else if (cmd is "help" or "?") {
+                    Console.WriteLine("Commands: pass | rack | plays | seed | exit");
                     Console.WriteLine("or enter row,col,h/v,word to play a word");
                     continue;
                 }
                 passes = 0;
                 if (cmd == "rack") {
-                    game.Bag.AddRange(curPlayer.Tiles);
-                    curPlayer.Tiles.Clear();
-                    game.ShuffleBag(random);
-                    curPlayer.Draw(game.Bag);
-                    game.Turn = (game.Turn + 1) % players;
+                    if (game.Bag.Count == 0) {
+                        Console.WriteLine("Bag is empty - did you want to pass?");
+                        continue;
+                    }
+                    curPlayer.Rack(game.Bag, random);
+                    game.NextPlayer();
                     break;
                 }
                 if (cmd is null or "exit" or "quit") break;
                 string[] cmdParts = cmd.Split(',');
-                int row = int.Parse(cmdParts[0]) - 1, col = int.Parse(cmdParts[1]) - 1;
+                if (cmdParts.Length == 1 && cmd.Length > 1 && cmd.Length < wordList.WordsByLen.Length) {
+                    string w = cmd.ToUpper();
+                    // try to play word - only works if there is a single position/direction that works
+                    if (curPlayer.Tiles.Count(t => t.Letter == ' ') > 1)
+                        Console.WriteLine("Warning: this might be slow with multiple blank tiles");
+                    var plays = game.Board.GetPossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
+                        curPlayer.Tiles).Where(p => p.word == w).ToList();
+                    if (plays.Count < 1) {
+                        Console.WriteLine("No plays found");
+                        continue;
+                    } else if (plays.Count > 1) {
+                        Console.WriteLine("Must specify row,col,h/v");
+                        foreach (var p in plays.OrderBy(p => p.score + p.extras.Sum(e => e.score)))
+                            Console.WriteLine(
+                                $"  {p.y + 1},{p.x + 1},{(p.horizontal ? 'H' : 'V')},{w} = {p.score + p.extras.Sum(e => e.score)}");
+                        continue;
+                    }
+                    cmdParts = [plays[0].y + 1 + "", plays[0].x + 1 + "", plays[0].horizontal ? "H" : "V", w];
+                }
+                if (cmdParts.Length != 4) {
+                    Console.WriteLine("invalid command");
+                    continue;
+                }
+                if (!int.TryParse(cmdParts[0], out int row) || row < 1 || row > Board.BoardHeight) {
+                    Console.WriteLine("invalid row");
+                    continue;
+                }
+                row--;
+                if (!int.TryParse(cmdParts[1], out int col) || col < 1 || col > Board.BoardWidth) {
+                    Console.WriteLine("invalid col");
+                    continue;
+                }
+                col--;
+                if (cmdParts[2].ToUpper() is not "H" and not "V") {
+                    Console.WriteLine("invalid direction");
+                    continue;
+                }
                 bool horizontal = cmdParts[2].ToUpper() == "H";
                 string word = cmdParts[3].ToUpper();
                 if (!wordList.WordsByLen[word.Length].Contains(word)) {
                     Console.WriteLine("Invalid word");
                     continue;
                 }
-                int currentPlayerTurn = game.Turn, currentScore = curPlayer.Score;
                 string error = game.Play(word, row, col, horizontal, wordList.WordsByLen);
                 if (error == null) {
                     int newScore = curPlayer.Score;

@@ -1,6 +1,8 @@
 namespace Scrabble;
 
 public class Board {
+    private static readonly (int dy, int dx)[] Directions = [(0, 1), (1, 0)];
+
     // * = center, 2 = double word, 3 = triple word, d = double letter, t = triple letter
     private static readonly string[] Bonuses = """
                                                3..d...3...d..3
@@ -20,7 +22,7 @@ public class Board {
                                                3..d...3...d..3
                                                """.Split('\n'); // *=d
 
-    private static readonly int BoardHeight = Bonuses.Length, BoardWidth = Bonuses[0].Length;
+    public static readonly int BoardHeight = Bonuses.Length, BoardWidth = Bonuses[0].Length;
 
     private static int WordMultiplier(char c) => c switch {
         '*' or '2' => 2,
@@ -102,70 +104,68 @@ public class Board {
             string[] words = wordsByLen[len];
             byte[][] letterCountsForWords = letterCountsByWordsByLen[len];
             byte[] letterCounts = new byte[26];
-            for (int h = 0; h < 2; h++) {
-                bool horizontal = h != 0;
-                int xl = horizontal ? BoardWidth - len + 1 : BoardWidth,
-                    yl = horizontal ? BoardHeight : BoardHeight - len + 1;
+            foreach (var dir in Directions) {
+                int xl = BoardWidth - (len - 1) * dir.dx, yl = BoardHeight - (len - 1) * dir.dy;
                 for (int y = 0; y < yl; y++) {
                     for (int x = 0; x < xl; x++) {
-                        // ensure it is connected and is not extending an existing word
-                        if (horizontal) {
-                            if (x > 0 && Tiles[y, x - 1] != null || x < xl - 1 && Tiles[y, x + len] != null) continue;
-                        } else {
-                            if (y > 0 && Tiles[y - 1, x] != null || y < yl - 1 && Tiles[y + len, x] != null) continue;
-                        }
+                        // ensure is not extending an existing word
+                        (int y, int x) before = (y - dir.dy, x - dir.dx);
+                        if (before is { y: >= 0, x: >= 0 } && Tiles[before.y, before.x] != null) continue;
+                        (int y, int x) after = (y + len * dir.dy, x + len * dir.dx);
+                        if (after.y < BoardHeight && after.x < BoardWidth && Tiles[after.y, after.x] != null) continue;
 
-                        // add the tiles on the board and check to see if we are connected
+                        // count the tiles on the board and check to see if we are connected
                         Array.Copy(letterCountsFromTiles, letterCounts, 26);
                         bool connected = false;
-                        for (int i = 0; i < len; i++) {
-                            Tile b = horizontal ? Tiles[y, x + i] : Tiles[y + i, x];
+                        for (int i = 0, tx = x, ty = y; i < len; i++, tx += dir.dx, ty += dir.dy) {
+                            Tile b = Tiles[ty, tx];
                             if (b != null) {
                                 letterCounts[b.Letter - 'A']++;
                                 connected = true;
                             }
-                            connected |= IsCenter(horizontal ? Bonuses[y][x + i] : Bonuses[y + i][x]);
+                            connected |= IsCenter(Bonuses[ty][tx]);
                         }
                         if (!connected) continue;
 
                         // check all words of the given length
-                        for (int wi = 0; wi < words.Length; wi++) {
-                            var wlc = letterCountsForWords[wi];
+                        for (int wordIndex = 0; wordIndex < words.Length; wordIndex++) {
+                            var wlc = letterCountsForWords[wordIndex];
 
                             // do we have enough letters (including blanks)
                             bool isValid = true;
                             int remainingBlanks = blankCount;
                             string blankLetters = "";
-                            for (int i = 0; i < 26; i++)
-                                if (letterCounts[i] < wlc[i]) {
+                            for (int letter = 0; letter < 26; letter++)
+                                if (letterCounts[letter] < wlc[letter]) {
                                     if (--remainingBlanks < 0) {
                                         isValid = false;
                                         break;
                                     }
-                                    blankLetters += (char)('A' + i);
+                                    blankLetters += (char)('A' + letter);
                                 }
                             if (!isValid) continue;
 
                             // compute where the blanks would be used
-                            string word = words[wi];
+                            string word = words[wordIndex];
                             int blankPositions = 0;
-                            if (blankLetters.Length > 0) {
-                                for (int i = 0, m = 1; i < word.Length; i++, m <<= 1) {
-                                    int j = blankLetters.IndexOf(word[i]);
-                                    if (j >= 0) {
-                                        blankPositions |= m;
-                                        blankLetters = blankLetters.Remove(j, 1);
+                            if (blankLetters.Length > 0)
+                                for (int charIndex = 0, charIndexMask = 1;
+                                     charIndex < word.Length;
+                                     charIndex++, charIndexMask <<= 1) {
+                                    int blankIndex = blankLetters.IndexOf(word[charIndex]);
+                                    if (blankIndex >= 0) {
+                                        blankPositions |= charIndexMask;
+                                        blankLetters = blankLetters.Remove(blankIndex, 1);
                                     }
                                 }
-                            }
 
                             // compute the score - might be rejected if perpendicular words are not valid
                             (int score, _, List<(string word, int score)> extras) =
-                                GetScore(y, x, horizontal, word, tiles, wordsByLen);
+                                GetScore(y, x, dir.dx > 0, word, tiles, wordsByLen);
+                            if (score < 0) continue;
 
                             // return the result
-                            if (score + extras?.Sum(e => e.score) > 0)
-                                yield return (y, x, horizontal, word, score, extras, blankPositions);
+                            yield return (y, x, dir.dx > 0, word, score, extras, blankPositions);
                         }
                     }
                 }
@@ -175,6 +175,7 @@ public class Board {
 
     public (int score, int usedTiles, List<(string word, int score)> extras) GetScore(int y, int x,
         bool horizontal, string word, List<Tile> rack, string[][] wordListByLen) {
+        (int score, int usedTiles, List<(string word, int score)> extras) errorResult = (-1, 0, null);
         bool connected = false;
         int score = 0, wordMultiplier = 1, tileUsed = 0;
         List<(string word, int score)> extras = new();
@@ -184,7 +185,7 @@ public class Board {
             char b = Bonuses[y][x];
             wordMultiplier *= WordMultiplier(b);
             Tile t = Tiles[y, x];
-            if (t != null && t.Letter != c) return (0, 0, null);
+            if (t != null && t.Letter != c) return errorResult;
             connected |= t != null || IsCenter(Bonuses[y][x]);
             bool hadTileAlready = t != null;
             if (t == null)
@@ -201,48 +202,33 @@ public class Board {
                         tileUsed |= m;
                         break;
                     }
-            if (t == null) return (0, 0, null);
+            if (t == null) return errorResult;
             score += t.Points * LetterMultiplier(b);
             if (!hadTileAlready) {
                 // if we are placing a tile on the board, we need to check if it is connected to other tiles
                 // and that they form valid words as well as score the word we are forming
                 int subScore = 0, subWordMultiplier = 1;
-                char[] subWord = null;
+                int subWordStart = horizontal ? x : y, subWordEnd = subWordStart, subWordOrg = subWordStart;
                 if (horizontal) {
-                    int ys = y, ye = y;
-                    for (; ys > 0 && Tiles[ys - 1, x] != null;) ys--; // look up
-                    for (; ye < BoardHeight - 1 && Tiles[ye + 1, x] != null;) ye++; // look down
-                    if (ys < y || ye > y) { // if we are connecting perpendicularly
-                        // read the word and score it
-                        subWord = new char[ye - ys + 1];
-                        for (int yy = ys; yy <= ye; yy++) {
-                            Tile tt = yy == y ? t : Tiles[yy, x];
-                            char bb = Bonuses[yy][x];
-                            subScore += tt.Points * LetterMultiplier(bb);
-                            subWordMultiplier *= WordMultiplier(bb);
-                            subWord[yy - ys] = tt.Letter;
-                        }
-                    }
+                    for (; subWordStart > 0 && Tiles[subWordStart - 1, x] != null;) subWordStart--; // look up
+                    for (; subWordEnd < BoardHeight - 1 && Tiles[subWordEnd + 1, x] != null;) subWordEnd++; // look down
                 } else {
-                    int xs = x, xe = x;
-                    for (; xs > 0 && Tiles[y, xs - 1] != null;) xs--; // look left
-                    for (; xe < BoardWidth - 1 && Tiles[y, xe + 1] != null;) xe++; // look right
-                    if (xs < x || xe > x) { // if we are connecting perpendicularly
-                        // read the word and score it
-                        subWord = new char[xe - xs + 1];
-                        for (int xx = xs; xx <= xe; xx++) {
-                            Tile tt = xx == x ? t : Tiles[y, xx];
-                            char bb = Bonuses[y][xx];
-                            subScore += tt.Points * LetterMultiplier(bb);
-                            subWordMultiplier *= WordMultiplier(bb);
-                            subWord[xx - xs] = tt.Letter;
-                        }
-                    }
+                    for (; subWordStart > 0 && Tiles[y, subWordStart - 1] != null;) subWordStart--; // look left
+                    for (; subWordEnd < BoardWidth - 1 && Tiles[y, subWordEnd + 1] != null;) subWordEnd++; // look right
                 }
-                if (subWord != null) {
+                if (subWordStart < subWordEnd) { // if we are connecting perpendicularly
+                    // read the word and score it
+                    var subWord = new char[subWordEnd - subWordStart + 1];
+                    for (int wi = subWordStart; wi <= subWordEnd; wi++) {
+                        Tile tt = wi == subWordOrg ? t : horizontal ? Tiles[wi, x] : Tiles[y, wi];
+                        char bb = Bonuses[horizontal ? wi : y][horizontal ? x : wi];
+                        subScore += tt.Points * LetterMultiplier(bb);
+                        subWordMultiplier *= WordMultiplier(bb);
+                        subWord[wi - subWordStart] = tt.Letter;
+                    }
                     // check if the perpendicular word is valid
                     string sw = new(subWord);
-                    if (!wordListByLen[sw.Length].Contains(sw)) return (0, 0, null);
+                    if (!wordListByLen[sw.Length].Contains(sw)) return errorResult;
                     // record the perpendicular word and its score
                     extras.Add((sw, subScore * subWordMultiplier));
                 }
@@ -250,7 +236,7 @@ public class Board {
             if (horizontal) x++;
             else y++;
         }
-        if (!connected || tileUsed == 0) return (0, 0, null);
+        if (!connected || tileUsed == 0) return errorResult;
         // bonus for using all tiles
         if (tileUsed == (1 << rack.Count) - 1)
             extras.Add(("all tiles used", 50));

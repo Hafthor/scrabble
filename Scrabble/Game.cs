@@ -5,8 +5,10 @@ public class Game {
     public readonly List<Tile> Bag;
     public readonly Board Board;
     public int Turn;
+    private readonly Random _random;
 
-    public Game(int players, Random random = null) {
+    public Game(int players, Random random) {
+        _random = random;
         Board = new();
         Bag = new();
         for (char letter = 'A'; letter <= 'Z'; letter++) {
@@ -20,18 +22,10 @@ public class Game {
             for (int i = 0; i < Tile.CountForLetter(letter); i++)
                 Bag.Add(new Tile(letter, points));
         }
-        ShuffleBag(random);
         Players = new Player[players];
-        for (int i = 0; i < players; i++)
-            Players[i] = new Player(Bag);
-    }
-
-    public void ShuffleBag(Random random = null) {
-        random ??= new();
-        // Fisher-Yates shuffle
-        for (int i = Bag.Count - 1; i > 0; i--) {
-            int j = random.Next(i + 1);
-            (Bag[i], Bag[j]) = (Bag[j], Bag[i]);
+        for (int i = 0; i < players; i++) {
+            Players[i] = new Player();
+            Players[i].Draw(Bag, random);
         }
     }
 
@@ -39,8 +33,8 @@ public class Game {
         Player player = Players[Turn];
         (int score, int usedTiles, List<(string word, int score)> extras) =
             Board.GetScore(row, col, horizontal, word, player.Tiles, wordsByLen);
-        if (extras != null) score += extras.Sum(e => e.score);
-        if (score == 0) return "Invalid play";
+        if (score < 0) return "Invalid play";
+        score += extras.Sum(e => e.score);
         // commit the play
         List<Tile> tilesToUse = player.Tiles.Where((_, i) => (usedTiles & (1 << i)) != 0).ToList();
         foreach (var c in word) {
@@ -54,9 +48,13 @@ public class Game {
             if (horizontal) col++;
             else row++;
         }
-        player.Draw(Bag);
         player.Score += score;
-        Turn = (Turn + 1) % Players.Length;
+        player.Draw(Bag, _random);
+        NextPlayer();
         return null;
+    }
+
+    public void NextPlayer() {
+        Turn = (Turn + 1) % Players.Length;
     }
 }
