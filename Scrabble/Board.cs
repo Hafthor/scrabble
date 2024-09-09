@@ -41,6 +41,14 @@ public class Board {
     public readonly Tile[,] Tiles = new Tile[BoardHeight, BoardWidth];
 
     public void Print() {
+        bool hasAnyTiles = false;
+        for (int r = 0; !hasAnyTiles && r < BoardHeight; r++)
+            for (int c = 0; c < BoardWidth; c++)
+                if (Tiles[r, c] != null) {
+                    hasAnyTiles = true;
+                    break;
+                }
+
         // Prints color legend
         Console.WriteLine(Colors.DoubleLetterScore + "  " + Ansi.Reset + "=2xLetter, " +
                           Colors.TripleLetterScore + "  " + Ansi.Reset + "=3xLetter, " +
@@ -67,13 +75,17 @@ public class Board {
                     _ => Ansi.BrownBg
                 });
                 if (t == null) {
-                    // if (b == '*') Console.Write(Ansi.Red + "><");
-                    // else if (b == '2') Console.Write(Ansi.Red + "dw");
-                    // else if (b == '3') Console.Write(Ansi.Pink + "tw");
-                    // else if (b == 'd') Console.Write(Ansi.BGreen + "dl");
-                    // else if (b == 't') Console.Write(Ansi.BBlue + "tl");
-                    // else Console.Write("  ");
-                    Console.Write("  ");
+                    if (hasAnyTiles)
+                        Console.Write("  ");
+                    else
+                        Console.Write(b switch {
+                            '*' => Ansi.Red + "><",
+                            '2' => Ansi.Red + "dw",
+                            '3' => Ansi.Pink + "tw",
+                            'd' => Ansi.BGreen + "dl",
+                            't' => Ansi.BBlue + "tl",
+                            _ => "  "
+                        });
                 } else {
                     Console.Write(t.OrgLetter == ' ' ? Colors.BlankTile : Colors.RegularTile);
                     Console.Write($"{t}");
@@ -203,7 +215,7 @@ public class Board {
                 // if we are placing a tile on the board, we need to check if it is connected to other tiles
                 // and that they form valid words as well as score the word we are forming
                 int subScore = 0, subWordMultiplier = 1;
-                int subWordStart = horizontal ? x : y, subWordEnd = subWordStart, subWordOrg = subWordStart;
+                int subWordStart = horizontal ? y : x, subWordEnd = subWordStart, subWordOrg = subWordStart;
                 if (horizontal) {
                     for (; subWordStart > 0 && Tiles[subWordStart - 1, x] != null;) subWordStart--; // look up
                     for (; subWordEnd < BoardHeight - 1 && Tiles[subWordEnd + 1, x] != null;) subWordEnd++; // look down
