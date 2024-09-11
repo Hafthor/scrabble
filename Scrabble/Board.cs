@@ -20,7 +20,7 @@ public class Board {
                                                ..2...d.d...2..
                                                .2...t...t...2.
                                                3..d...3...d..3
-                                               """.Split('\n'); // *=d
+                                               """.Split(Environment.NewLine); // *=d
 
     public static readonly int BoardHeight = Bonuses.Length, BoardWidth = Bonuses[0].Length;
 
@@ -112,20 +112,20 @@ public class Board {
             string[] words = wordsByLen[len];
             byte[][] letterCountsForWords = letterCountsByWordsByLen[len];
             byte[] letterCounts = new byte[26];
-            foreach (var dir in Directions) {
-                int xl = BoardWidth - (len - 1) * dir.dx, yl = BoardHeight - (len - 1) * dir.dy;
+            foreach (var (dy, dx) in Directions) {
+                int xl = BoardWidth - (len - 1) * dx, yl = BoardHeight - (len - 1) * dy;
                 for (int y = 0; y < yl; y++) {
                     for (int x = 0; x < xl; x++) {
                         // ensure is not extending an existing word
-                        (int y, int x) before = (y - dir.dy, x - dir.dx);
+                        (int y, int x) before = (y - dy, x - dx);
                         if (before is { y: >= 0, x: >= 0 } && Tiles[before.y, before.x] != null) continue;
-                        (int y, int x) after = (y + len * dir.dy, x + len * dir.dx);
+                        (int y, int x) after = (y + len * dy, x + len * dx);
                         if (after.y < BoardHeight && after.x < BoardWidth && Tiles[after.y, after.x] != null) continue;
 
                         // count the tiles on the board and check to see if we are connected
                         Array.Copy(letterCountsFromTiles, letterCounts, 26);
                         bool connected = false;
-                        for (int i = 0, tx = x, ty = y; i < len; i++, tx += dir.dx, ty += dir.dy) {
+                        for (int i = 0, tx = x, ty = y; i < len; i++, tx += dx, ty += dy) {
                             Tile b = Tiles[ty, tx];
                             if (b != null) {
                                 letterCounts[b.Letter - 'A']++;
@@ -169,11 +169,11 @@ public class Board {
 
                             // compute the score - might be rejected if perpendicular words are not valid
                             (string error, int score, _, List<(string word, int score)> extras) =
-                                Score(y, x, dir.dx > 0, word, tiles, wordsByLen);
+                                Score(y, x, dx > 0, word, tiles, wordsByLen);
                             if (error != null) continue;
 
                             // return the result
-                            yield return (y, x, dir.dx > 0, word, score, extras, blankPositions);
+                            yield return (y, x, dx > 0, word, score, extras, blankPositions);
                         }
                     }
                 }
@@ -185,7 +185,7 @@ public class Board {
         bool horizontal, string word, List<Tile> rack, string[][] wordListByLen) {
         bool connected = false;
         int score = 0, wordMultiplier = 1, tileUsed = 0;
-        List<(string word, int score)> extras = new();
+        List<(string word, int score)> extras = [];
 
         // check if the word can be placed and score it
         foreach (var c in word) {

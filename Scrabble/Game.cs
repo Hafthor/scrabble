@@ -2,15 +2,13 @@ namespace Scrabble;
 
 public class Game {
     public readonly Player[] Players;
-    public readonly List<Tile> Bag;
-    public readonly Board Board;
+    public readonly List<Tile> Bag = [];
+    public readonly Board Board = new();
     public int Turn;
     private readonly Random _random;
 
     public Game(int players, Random random) {
         _random = random;
-        Board = new();
-        Bag = new();
         for (char letter = 'A'; letter <= 'Z'; letter++)
             for (int points = Tile.PointsForLetter(letter), i = 0; i < Tile.CountForLetter(letter); i++)
                 Bag.Add(new Tile(letter, points));

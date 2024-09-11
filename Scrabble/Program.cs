@@ -88,11 +88,12 @@ public static class Program {
                     continue;
                 }
                 col--;
-                if (cmdParts[2].ToUpper() is not "H" and not "V") {
+                string dir = cmdParts[2].ToUpper();
+                if (dir is not "H" and not "V") {
                     Console.WriteLine("invalid direction");
                     continue;
                 }
-                bool horizontal = cmdParts[2].ToUpper() == "H";
+                bool horizontal = dir == "H";
                 string word = cmdParts[3].ToUpper();
                 if (!wordList.WordsByLen[word.Length].Contains(word)) {
                     Console.WriteLine("Invalid word");
