@@ -186,6 +186,15 @@ public class Board {
         bool connected = false;
         int score = 0, wordMultiplier = 1, tileUsed = 0;
         List<(string word, int score)> extras = [];
+        
+        // ensure is not extending an existing word
+        var (dy, dx) = Directions[horizontal ? 0 : 1];
+        (int y, int x) before = (y - dy, x - dx);
+        if (before is { y: >= 0, x: >= 0 } && Tiles[before.y, before.x] != null) 
+            return ($"extending existing word at {before.y + 1},{before.x + 1}", 0, 0, null);
+        (int y, int x) after = (y + word.Length * dy, x + word.Length * dx);
+        if (after.y < BoardHeight && after.x < BoardWidth && Tiles[after.y, after.x] != null) 
+            return ($"extending existing word at {after.y + 1},{after.x + 1}", 0, 0, null);
 
         // check if the word can be placed and score it
         foreach (var c in word) {
