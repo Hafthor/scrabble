@@ -16,8 +16,13 @@ public static class Program {
             Console.WriteLine(string.Join(" ", curPlayer.Tiles));
             string cmd;
             for (;;) {
-                Console.Write("Enter command or help: ");
-                cmd = Console.ReadLine();
+                if (curPlayer.Tiles.Count == 0) {
+                    Console.WriteLine("Player has no tiles - pass");
+                    cmd = "pass";
+                } else {
+                    Console.Write("Enter command or help: ");
+                    cmd = Console.ReadLine();
+                }
                 if (cmd is "" or "plays") {
                     if (curPlayer.Tiles.Count(t => t.Letter == ' ') > 1)
                         Console.WriteLine("Warning: this might be slow with multiple blank tiles");
@@ -32,6 +37,19 @@ public static class Program {
                         Console.WriteLine(extras.Count > 0 ? $", total={score + extras.Sum(p => p.score)}" : "");
                     }
                     continue;
+                } else if (cmd == "auto") {
+                    var play = game.Board.PossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
+                        curPlayer.Tiles)
+                        .OrderBy(p => p.score + p.extras.Sum(e => e.score)).ThenBy(p => p.word).LastOrDefault();
+                    if (play.word == null) {
+                        Console.WriteLine("No plays found");
+                        continue;
+                    }
+                    cmd = $"{play.y + 1},{play.x + 1},{(play.horizontal ? 'H' : 'V')},{play.word}";
+                    int score = play.score + play.extras.Sum(e => e.score);
+                    string extras = string.Concat(play.extras.Select(p => $", {p.word}={p.score}"));
+                    if (extras != "") extras += $", total={score}";
+                    Console.WriteLine($"Play: {cmd}={play.score}{extras}");
                 } else if (cmd == "seed") {
                     Console.WriteLine($"Seed={seed}");
                     continue;
