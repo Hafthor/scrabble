@@ -8,7 +8,7 @@ public static class Program {
         Game game = new(players, random);
         WordList wordList = new();
         int passes = 0;
-        while (passes < players) {
+        for (bool fullAuto = false; passes < players;) {
             game.Board.Print();
             var curPlayer = game.Players[game.Turn];
             int currentPlayerTurn = game.Turn, currentScore = curPlayer.Score;
@@ -19,6 +19,8 @@ public static class Program {
                 if (curPlayer.Tiles.Count == 0) {
                     Console.WriteLine("Player has no tiles - pass");
                     cmd = "pass";
+                } else if (fullAuto) {
+                    cmd = "auto";
                 } else {
                     Console.Write("Enter command or help: ");
                     cmd = Console.ReadLine();
@@ -36,6 +38,9 @@ public static class Program {
                             Console.Write($", {ww}={ss}");
                         Console.WriteLine(extras.Count > 0 ? $", total={score + extras.Sum(p => p.score)}" : "");
                     }
+                    continue;
+                } else if (cmd == "fullauto") {
+                    fullAuto = true;
                     continue;
                 } else if (cmd == "auto") {
                     var play = game.Board.PossiblePlays(wordList.WordsByLen, wordList.LetterCountsForWordsByLen,
